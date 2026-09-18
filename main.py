@@ -30,7 +30,7 @@ html, body {
 }
 
 #cat {
-    position: fixed;
+    position: absolute;
     font-size: 36px;
     z-index: 999999;
     pointer-events: none;
@@ -43,15 +43,15 @@ html, body {
 
 @keyframes catWiggle {
     from {
-        rotate: -5deg;
+        transform: rotate(-5deg);
     }
     to {
-        rotate: 5deg;
+        transform: rotate(5deg);
     }
 }
 
 .heart {
-    position: fixed;
+    position: absolute;
     font-size: 25px;
     pointer-events: none;
     animation: heartUp 1s ease-out forwards;
@@ -79,8 +79,8 @@ html, body {
 const cat = document.getElementById("cat");
 
 document.addEventListener("mousemove", function(event) {
-    cat.style.left = (event.clientX + 15) + "px";
-    cat.style.top = (event.clientY + 15) + "px";
+    cat.style.left = (event.clientX + 10) + "px";
+    cat.style.top = (event.clientY + 10) + "px";
 });
 
 document.addEventListener("click", function(event) {
@@ -101,7 +101,7 @@ document.addEventListener("click", function(event) {
 
 </body>
 </html>
-""", height=1, scrolling=False)
+""", height=700, scrolling=False)
 
 # ==================================================
 # 제목
