@@ -9,28 +9,106 @@ import plotly.express as px
 st.set_page_config(page_title="전국 인구 구조 지도", layout="wide")
 
 # ==================================================
-# 🐱 마우스를 따라다니는 고양이
+# 🐱 고양이 효과 시작
 # ==================================================
+
 components.html("""
-<div id="cat" style="
-    position: fixed;
-    left: 20px;
-    top: 20px;
-    font-size: 30px;
-    z-index: 999999;
-    pointer-events: none;
-    transition: left 0.08s linear, top 0.08s linear;
-">🐱</div>
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+    }
+
+    #cat {
+        position: fixed;
+        font-size: 36px;
+        z-index: 999999;
+        pointer-events: none;
+        left: 0;
+        top: 0;
+        transform: translate(-100px, -100px);
+        transition: left 0.12s ease-out,
+                    top 0.12s ease-out;
+        animation: catWiggle 0.5s infinite alternate;
+    }
+
+    @keyframes catWiggle {
+        from {
+            rotate: -5deg;
+        }
+        to {
+            rotate: 5deg;
+        }
+    }
+
+    .heart {
+        position: fixed;
+        font-size: 25px;
+        pointer-events: none;
+        animation: heartUp 1s ease-out forwards;
+        z-index: 999998;
+    }
+
+    @keyframes heartUp {
+        0% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        100% {
+            opacity: 0;
+            transform: translateY(-100px) scale(1.5);
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div id="cat">🐱</div>
 
 <script>
 const cat = document.getElementById("cat");
 
+// 마우스 따라가기
 document.addEventListener("mousemove", function(event) {
     cat.style.left = (event.clientX + 15) + "px";
     cat.style.top = (event.clientY + 15) + "px";
 });
+
+// 클릭 시 하트 생성
+document.addEventListener("click", function(event) {
+
+    const heart = document.createElement("div");
+
+    heart.className = "heart";
+    heart.innerHTML = "💗";
+
+    heart.style.left = event.clientX + "px";
+    heart.style.top = event.clientY + "px";
+
+    document.body.appendChild(heart);
+
+    setTimeout(function() {
+        heart.remove();
+    }, 1000);
+});
 </script>
-""", height=0)
+
+</body>
+</html>
+""", height=700, scrolling=False)
+
+# ==================================================
+# 🐱 고양이 효과 끝
+# ==================================================
+
 
 st.title("🗺️ 전국 인구 구조 지도")
 st.caption("시군구별 인구 비율 분석 (행정안전부 주민등록 인구)")
@@ -57,12 +135,14 @@ geojson = load_geojson()
 # ==================================================
 # 1. 최신 연도 데이터
 # ==================================================
+
 latest_year = int(df["연도"].max())
 df = df[df["연도"] == latest_year].copy()
 
 # ==================================================
 # 2. 연령별 인구 열 찾기
 # ==================================================
+
 total_cols = [c for c in df.columns if c.startswith("계_")]
 
 
@@ -71,30 +151,29 @@ def age_of(col):
     return int(m.group(1)) if m else None
 
 
-# 65세 이상
 elderly_cols = [
     c for c in total_cols
     if age_of(c) is not None and age_of(c) >= 65
 ]
 
-# 19~39세 청년
+# 청년: 19~39세
 youth_cols = [
     c for c in total_cols
     if age_of(c) is not None and 19 <= age_of(c) <= 39
 ]
 
 # ==================================================
-# 3. 전체 인구·고령 인구·청년 인구 계산
+# 3. 전체 인구·고령 인구·청년 인구
 # ==================================================
+
 df["전체인구"] = df[total_cols].sum(axis=1)
-
 df["고령인구"] = df[elderly_cols].sum(axis=1)
-
 df["청년인구"] = df[youth_cols].sum(axis=1)
 
 # ==================================================
-# 4. 시군구 단위 집계
+# 4. 시군구별 집계
 # ==================================================
+
 df["시군구코드"] = df["코드"].str[:5]
 
 grouped = (
@@ -114,8 +193,9 @@ grouped["청년비율"] = (
 ).round(2)
 
 # ==================================================
-# 5. 지도 경계의 지역 이름 연결
+# 5. 지역 이름 연결
 # ==================================================
+
 names = pd.DataFrame([
     {
         "시군구코드": str(f["properties"]["코드"]),
@@ -134,6 +214,7 @@ merged = grouped.merge(
 # ==================================================
 # 6. 모드 선택
 # ==================================================
+
 st.sidebar.header("⚙️ 지도 설정")
 
 mode = st.sidebar.radio(
@@ -142,13 +223,16 @@ mode = st.sidebar.radio(
 )
 
 if mode == "고령화율":
+
     value_col = "고령화율"
     population_col = "고령인구"
+
     title_text = "65세 이상 인구 비율"
     legend_title = f"고령화율 ({latest_year}년)"
     map_title = f"🗺️ 전국 고령화 지도 ({latest_year}년)"
 
     BINS = [0, 19, 23, 28, 38, 100]
+
     LABELS = [
         "19% 미만",
         "19~23%",
@@ -166,14 +250,16 @@ if mode == "고령화율":
     }
 
 else:
+
     value_col = "청년비율"
     population_col = "청년인구"
+
     title_text = "19~39세 청년 인구 비율"
     legend_title = f"청년 비율 ({latest_year}년)"
     map_title = f"🗺️ 전국 청년 비율 지도 ({latest_year}년)"
 
-    # 청년 비율의 구간은 고령화율과 별도로 설정
     BINS = [0, 10, 15, 20, 25, 100]
+
     LABELS = [
         "10% 미만",
         "10~15%",
@@ -191,8 +277,9 @@ else:
     }
 
 # ==================================================
-# 7. 선택한 모드에 맞는 단계 구분
+# 7. 단계 구분
 # ==================================================
+
 merged["단계"] = pd.cut(
     merged[value_col],
     bins=BINS,
@@ -203,6 +290,7 @@ merged["단계"] = pd.cut(
 # ==================================================
 # 8. 지도 생성
 # ==================================================
+
 st.subheader(map_title)
 
 fig = px.choropleth(
@@ -239,13 +327,20 @@ fig.update_layout(
 st.plotly_chart(fig, width="stretch")
 
 # ==================================================
-# 9. 선택한 모드의 순위 표
+# 9. 순위 표
 # ==================================================
+
 c1, c2 = st.columns(2)
 
-cols = ["시도", "시군구", value_col, population_col]
+cols = [
+    "시도",
+    "시군구",
+    value_col,
+    population_col
+]
 
 with c1:
+
     st.subheader(f"🔴 {title_text} 높은 곳 10")
 
     st.dataframe(
@@ -255,6 +350,7 @@ with c1:
     )
 
 with c2:
+
     st.subheader(f"🟢 {title_text} 낮은 곳 10")
 
     st.dataframe(
@@ -266,6 +362,7 @@ with c2:
 # ==================================================
 # 10. 기준 안내
 # ==================================================
+
 st.info(
     "현재 청년 비율 모드는 19~39세를 기준으로 계산합니다. "
     "청년 연령 기준은 분석 목적에 따라 변경할 수 있습니다."
